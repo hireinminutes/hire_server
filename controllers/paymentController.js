@@ -1,13 +1,14 @@
-const { Cashfree, CFEnvironment } = require('cashfree-pg');
+const Razorpay = require('razorpay');
+const crypto = require('crypto');
 const Candidate = require('../models/Candidate');
 const College = require('../models/College');
 
 
-// Initialize Cashfree
-Cashfree.XClientId = process.env.CASHFREE_APP_ID;
-Cashfree.XClientSecret = process.env.CASHFREE_SECRET_KEY;
-Cashfree.XEnvironment = process.env.CASHFREE_ENV === 'TEST' ? CFEnvironment.SANDBOX : CFEnvironment.PRODUCTION;
-const cashfree = new Cashfree(Cashfree.XEnvironment, Cashfree.XClientId, Cashfree.XClientSecret);
+// Initialize Razorpay
+const razorpay = new Razorpay({
+  key_id: process.env.RAZORPAY_KEY_ID,
+  key_secret: process.env.RAZORPAY_KEY_SECRET
+});
 
 
 // Create payment order
@@ -88,37 +89,31 @@ const createOrder = async (req, res) => {
       }
     }
 
-    // Prepare Cashfree order request
-    const orderId = `order_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
-    const request = {
-      order_amount: (finalAmount / 100).toFixed(2), // Cashfree takes amount in rupees (float)
-      order_currency: currency,
-      order_id: orderId,
-      customer_details: {
-        customer_id: req.user.id,
-        customer_phone: req.user.profile?.phone || '9999999999',
-        customer_name: req.user.fullName || 'User',
-        customer_email: req.user.email
-      },
-      order_meta: {
-        return_url: `${process.env.CLIENT_URL || 'http://localhost:5173'}/payment/status?order_id={order_id}`
-      },
-      order_tags: {
+    // Prepare Razorpay order request
+    const options = {
+      amount: finalAmount, // amount in paise (already in paise from frontend)
+      currency: currency,
+      receipt: `order_${Date.now()}_${Math.floor(Math.random() * 1000)}`,
+      notes: {
         planType: planType || 'premium',
-        userId: req.user.id
+        userId: req.user.id,
+        userEmail: req.user.email,
+        userName: req.user.fullName || 'User'
       }
     };
 
-    console.log('Creating Cashfree order with options:', request);
-    const response = await cashfree.PGCreateOrder(request);
+    console.log('Creating Razorpay order with options:', options);
+    const order = await razorpay.orders.create(options);
 
-
-    const orderData = response.data;
+    console.log('Razorpay order created:', order);
 
     res.status(200).json({
       success: true,
       data: {
-        ...orderData,
+        orderId: order.id,
+        amount: order.amount,
+        currency: order.currency,
+        key_id: process.env.RAZORPAY_KEY_ID,
         discountApplied,
         discountMessage,
         originalAmount: amount,
@@ -129,11 +124,11 @@ const createOrder = async (req, res) => {
 
   } catch (error) {
     console.error('Create order error:', error);
-    const errorMessage = error.response?.data?.message || error.message || 'Server Error';
-    res.status(error.response?.status || 500).json({
+    const errorMessage = error.message || 'Server Error';
+    res.status(500).json({
       success: false,
       message: errorMessage,
-      error: error.response?.data
+      error: error
     });
   }
 };
@@ -143,46 +138,38 @@ const verifyPayment = async (req, res) => {
   try {
     console.log('Verify payment request:', req.body);
 
-    // Cashfree verification is typically done by fetching the order details
-    const { orderId } = req.body; // Expecting orderId from frontend
+    const { razorpay_order_id, razorpay_payment_id, razorpay_signature } = req.body;
 
-    if (!orderId) {
+    if (!razorpay_order_id || !razorpay_payment_id || !razorpay_signature) {
       return res.status(400).json({
         success: false,
-        message: 'Order ID is required'
+        message: 'Missing payment verification parameters'
       });
     }
 
-    const response = await cashfree.PGOrderFetchPayments(orderId);
+    // Verify signature
+    const body = razorpay_order_id + "|" + razorpay_payment_id;
+    const expectedSignature = crypto
+      .createHmac('sha256', process.env.RAZORPAY_KEY_SECRET)
+      .update(body.toString())
+      .digest('hex');
 
-
-    const payments = response.data;
-
-    console.log('Payment details:', payments);
-
-    // Find a successful payment
-    const successPayment = payments.find(p => p.payment_status === 'SUCCESS');
-
-    if (!successPayment) {
+    if (expectedSignature !== razorpay_signature) {
+      console.log('Signature verification failed');
       return res.status(400).json({
         success: false,
-        message: 'Payment verification failed or payment pending'
+        message: 'Payment verification failed - invalid signature'
       });
     }
 
-    // Fetch order to get tags (metadata)
-    // Note: FetchPayments doesn't return tags. FetchOrder does.
-    const orderResponse = await cashfree.PGOrderFetchPayments(orderId); // Correction: This line was redundant in original code, but updating if kept.
-    const orderDetailsResponse = await cashfree.PGFetchOrder(orderId);
+    // Fetch order details to get notes (metadata)
+    const order = await razorpay.orders.fetch(razorpay_order_id);
+    const planType = order.notes?.planType || 'premium';
 
-
-    const orderDetails = orderDetailsResponse.data;
-
-    const planType = orderDetails.order_tags?.planType || 'premium';
-
-    // Update user plan
+    console.log('Order details:', order);
     console.log(`Updating user plan to ${planType} for user:`, req.user.id);
 
+    // Update user plan
     const updateData = {
       planActivatedAt: new Date(),
     };
@@ -209,8 +196,8 @@ const verifyPayment = async (req, res) => {
       success: true,
       message: 'Payment verified successfully',
       data: {
-        paymentId: successPayment.cf_payment_id,
-        orderId: orderId
+        paymentId: razorpay_payment_id,
+        orderId: razorpay_order_id
       }
     });
   } catch (error) {

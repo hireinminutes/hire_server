@@ -45,32 +45,33 @@ const sendEmail = async (options) => {
 const emailTemplates = {
     // OTP Verification Email Template
     otpVerification: (otp, userName = 'User') => ({
-        subject: 'Koderspark HireMe - Email Verification',
+        subject: 'Hire In Minutes- Email Verification',
         html: `
         <!DOCTYPE html>
         <html lang="en">
         <head>
             <meta charset="UTF-8">
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <title>Email Verification - Koderspark HireMe</title>
+            <title>Email Verification - Hire In Minutes</title>
             <style>
                 body {
                     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
                     line-height: 1.6;
-                    color: #333;
+                    color: #e2e8f0;
                     max-width: 600px;
                     margin: 0 auto;
-                    background-color: #f8fafc;
+                    background-color: #0f172a;
                     padding: 20px;
                 }
                 .container {
-                    background: white;
+                    background: #1e293b;
                     border-radius: 16px;
                     overflow: hidden;
-                    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+                    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+                    border: 1px solid #334155;
                 }
                 .header {
-                    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
                     padding: 40px 30px;
                     text-align: center;
                     color: white;
@@ -80,6 +81,7 @@ const emailTemplates = {
                     font-weight: bold;
                     margin-bottom: 10px;
                     letter-spacing: -1px;
+                    text-shadow: 0 2px 4px rgba(0,0,0,0.1);
                 }
                 .tagline {
                     font-size: 14px;
@@ -93,26 +95,27 @@ const emailTemplates = {
                 .greeting {
                     font-size: 24px;
                     font-weight: 600;
-                    color: #1a202c;
+                    color: #ffffff;
                     margin-bottom: 20px;
                 }
                 .message {
                     font-size: 16px;
-                    color: #4a5568;
+                    color: #cbd5e1;
                     margin-bottom: 30px;
                     line-height: 1.7;
                 }
                 .otp-container {
-                    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                    background: rgba(59, 130, 246, 0.1);
+                    border: 1px solid rgba(59, 130, 246, 0.2);
                     border-radius: 12px;
                     padding: 30px;
                     margin: 30px 0;
-                    box-shadow: 0 8px 25px rgba(102, 126, 234, 0.3);
+                    box-shadow: 0 0 20px rgba(59, 130, 246, 0.1);
                 }
                 .otp-label {
-                    color: white;
+                    color: #60a5fa;
                     font-size: 14px;
-                    font-weight: 500;
+                    font-weight: 600;
                     text-transform: uppercase;
                     letter-spacing: 1px;
                     margin-bottom: 15px;
@@ -121,33 +124,34 @@ const emailTemplates = {
                 .otp-code {
                     font-size: 36px;
                     font-weight: bold;
-                    color: white;
+                    color: #ffffff;
                     letter-spacing: 8px;
                     font-family: 'Courier New', monospace;
                     margin: 0;
-                    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+                    text-shadow: 0 0 20px rgba(59, 130, 246, 0.5);
                 }
                 .warning {
-                    background: #fef5e7;
+                    background: rgba(245, 158, 11, 0.1);
                     border-left: 4px solid #f59e0b;
                     padding: 20px;
                     margin: 30px 0;
                     border-radius: 8px;
+                    text-align: left;
                 }
                 .warning-text {
-                    color: #92400e;
+                    color: #fbbf24;
                     font-size: 14px;
                     margin: 0;
                     font-weight: 500;
                 }
                 .footer {
-                    background: #f8fafc;
+                    background: #1e293b;
                     padding: 30px;
                     text-align: center;
-                    border-top: 1px solid #e2e8f0;
+                    border-top: 1px solid #334155;
                 }
                 .footer-text {
-                    color: #718096;
+                    color: #94a3b8;
                     font-size: 14px;
                     margin: 0 0 10px 0;
                 }
@@ -157,7 +161,7 @@ const emailTemplates = {
                 .social-links a {
                     display: inline-block;
                     margin: 0 10px;
-                    color: #667eea;
+                    color: #60a5fa;
                     text-decoration: none;
                     font-weight: 500;
                 }

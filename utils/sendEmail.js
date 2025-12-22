@@ -29,7 +29,7 @@ const sendEmail = async (options) => {
     });
 
     const message = {
-        from: `${process.env.FROM_NAME || 'Koderspark HireMe'} <${emailFrom}>`,
+        from: `${process.env.FROM_NAME || 'Hire In Minutes'} <${emailFrom}>`,
         to: options.email,
         subject: options.subject,
         text: options.message,
@@ -188,14 +188,14 @@ const emailTemplates = {
         <body>
             <div class="container">
                 <div class="header">
-                    <div class="logo">🚀 Koderspark HireMe</div>
+                    <div class="logo">🚀 Hire In Minutes</div>
                     <p class="tagline">Connecting Talent with Opportunity</p>
                 </div>
 
                 <div class="content">
                     <h1 class="greeting">Welcome ${userName}! 👋</h1>
                     <p class="message">
-                        Thank you for joining Koderspark HireMe! To complete your registration and start your journey towards amazing career opportunities, please verify your email address using the code below.
+                        Thank you for joining Hire In Minutes! To complete your registration and start your journey towards amazing career opportunities, please verify your email address using the code below.
                     </p>
 
                     <div class="otp-container">
@@ -210,7 +210,7 @@ const emailTemplates = {
                     </div>
 
                     <p class="message">
-                        If you didn't create an account with Koderspark HireMe, please ignore this email.
+                        If you didn't create an account with Hire In Minutes, please ignore this email.
                     </p>
                 </div>
 
@@ -219,7 +219,7 @@ const emailTemplates = {
                         Need help? Contact our support team at <a href="mailto:support@koderspark.com" style="color: #667eea;">support@koderspark.com</a>
                     </p>
                     <p class="footer-text">
-                        © 2025 Koderspark HireMe. All rights reserved.
+                        © 2025 Hire In Minutes. All rights reserved.
                     </p>
                     <div class="social-links">
                         <a href="#">Privacy Policy</a> |
@@ -233,7 +233,7 @@ const emailTemplates = {
         `,
         text: `Welcome ${userName}!
 
-Thank you for joining Koderspark HireMe! To complete your registration, please verify your email address using this code:
+Thank you for joining Hire In Minutes! To complete your registration, please verify your email address using this code:
 
 Your verification code: ${otp}
 
@@ -243,19 +243,19 @@ If you didn't create an account, please ignore this email.
 
 Need help? Contact support@koderspark.com
 
-© 2025 Koderspark HireMe. All rights reserved.`
+© 2025 Hire In Minutes. All rights reserved.`
     }),
 
     // Welcome Email Template
     welcome: (userName = 'User') => ({
-        subject: 'Welcome to Koderspark HireMe! 🎉',
+        subject: 'Welcome to Hire In Minutes! 🎉',
         html: `
         <!DOCTYPE html>
         <html lang="en">
         <head>
             <meta charset="UTF-8">
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <title>Welcome to Koderspark HireMe</title>
+            <title>Welcome to Hire In Minutes</title>
             <style>
                 body {
                     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -427,7 +427,7 @@ Need help? Contact support@koderspark.com
         <body>
             <div class="container">
                 <div class="header">
-                    <div class="logo">🚀 Koderspark HireMe</div>
+                    <div class="logo">🚀 Hire In Minutes</div>
                     <p class="tagline">Connecting Talent with Opportunity</p>
                 </div>
 
@@ -435,13 +435,13 @@ Need help? Contact support@koderspark.com
                     <h1 class="greeting">Welcome aboard, ${userName}! 🎉</h1>
 
                     <p class="message">
-                        Congratulations! Your account has been successfully verified and you're now part of the Koderspark HireMe community. We're excited to help you connect with amazing career opportunities and discover your next big breakthrough.
+                        Congratulations! Your account has been successfully verified and you're now part of the Hire In Minutes community. We're excited to help you connect with amazing career opportunities and discover your next big breakthrough.
                     </p>
 
                     <div class="highlight-box">
                         <div class="highlight-title">🎯 Your Journey Starts Now</div>
                         <div class="highlight-text">
-                            Whether you're a talented professional seeking new opportunities or a company looking for exceptional talent, Koderspark HireMe is your gateway to success.
+                            Whether you're a talented professional seeking new opportunities or a company looking for exceptional talent, Hire In Minutes is your gateway to success.
                         </div>
                     </div>
 
@@ -485,7 +485,7 @@ Need help? Contact support@koderspark.com
                         Questions? Reach out to us at <a href="mailto:support@koderspark.com" style="color: #667eea;">support@koderspark.com</a>
                     </p>
                     <p class="footer-text">
-                        © 2025 Koderspark HireMe. All rights reserved.
+                        © 2025 Hire In Minutes. All rights reserved.
                     </p>
                     <div class="social-links">
                         <a href="#">Privacy Policy</a> |
@@ -499,7 +499,7 @@ Need help? Contact support@koderspark.com
         `,
         text: `Welcome aboard, ${userName}!
 
-Congratulations! Your account has been successfully verified and you're now part of the Koderspark HireMe community.
+Congratulations! Your account has been successfully verified and you're now part of the Hire In Minutes community.
 
 What you can do next:
 • Complete your profile to get better visibility
@@ -510,19 +510,19 @@ What you can do next:
 
 If you have any questions, reach out to us at support@koderspark.com
 
-© 2025 Koderspark HireMe. All rights reserved.`
+© 2025 Hire In Minutes. All rights reserved.`
     }),
 
     // Password Reset OTP Email Template
     passwordReset: (otp, userName = 'User') => ({
-        subject: 'Koderspark HireMe - Password Reset Code',
+        subject: 'Hire In Minutes - Password Reset Code',
         html: `
         <!DOCTYPE html>
         <html lang="en">
         <head>
             <meta charset="UTF-8">
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <title>Password Reset - Koderspark HireMe</title>
+            <title>Password Reset - Hire In Minutes</title>
             <style>
                 body {
                     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -644,14 +644,14 @@ If you have any questions, reach out to us at support@koderspark.com
         <body>
             <div class="container">
                 <div class="header">
-                    <div class="logo">🔐 Koderspark HireMe</div>
+                    <div class="logo">🔐 Hire In Minutes</div>
                     <p class="tagline">Secure Password Reset</p>
                 </div>
 
                 <div class="content">
                     <h1 class="greeting">Password Reset Request</h1>
                     <p class="message">
-                        Hi ${userName}, we received a request to reset your password for your Koderspark HireMe account. Use the verification code below to proceed with resetting your password.
+                        Hi ${userName}, we received a request to reset your password for your Hire In Minutes account. Use the verification code below to proceed with resetting your password.
                     </p>
 
                     <div class="otp-container">
@@ -675,7 +675,7 @@ If you have any questions, reach out to us at support@koderspark.com
                         Need help? Contact our support team at <a href="mailto:support@koderspark.com" style="color: #667eea;">support@koderspark.com</a>
                     </p>
                     <p class="footer-text">
-                        © 2025 Koderspark HireMe. All rights reserved.
+                        © 2025 Hire In Minutes. All rights reserved.
                     </p>
                 </div>
             </div>
@@ -686,7 +686,7 @@ If you have any questions, reach out to us at support@koderspark.com
 
 Hi ${userName},
 
-We received a request to reset your password for your Koderspark HireMe account.
+We received a request to reset your password for your Hire In Minutes account.
 
 Your reset code: ${otp}
 
@@ -696,19 +696,19 @@ Enter this code in the password reset form to create a new password.
 
 Need help? Contact support@koderspark.com
 
-© 2025 Koderspark HireMe. All rights reserved.`
+© 2025 Hire In Minutes. All rights reserved.`
     }),
 
     // Email Notification Subscription Confirmation Template
     notificationSubscription: (userName = 'User') => ({
-        subject: '🎉 Welcome to Koderspark HireMe Notifications!',
+        subject: '🎉 Welcome to Hire In Minutes Notifications!',
         html: `
         <!DOCTYPE html>
         <html lang="en">
         <head>
             <meta charset="UTF-8">
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <title>Email Notifications Enabled - Koderspark HireMe</title>
+            <title>Email Notifications Enabled - Hire In Minutes</title>
             <style>
                 body {
                     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -898,7 +898,7 @@ Need help? Contact support@koderspark.com
         <body>
             <div class="container">
                 <div class="header">
-                    <div class="logo">🔔 Koderspark HireMe</div>
+                    <div class="logo">🔔 Hire In Minutes</div>
                     <p class="tagline">Stay Connected, Stay Ahead</p>
                 </div>
 
@@ -906,7 +906,7 @@ Need help? Contact support@koderspark.com
                     <h1 class="greeting">Notifications Enabled! 🎉</h1>
 
                     <p class="message">
-                        Hi ${userName}, welcome to the Koderspark HireMe notification family! You've successfully enabled email notifications and will now stay updated with the latest opportunities and platform activities.
+                        Hi ${userName}, welcome to the Hire In Minutes notification family! You've successfully enabled email notifications and will now stay updated with the latest opportunities and platform activities.
                     </p>
 
                     <div class="success-banner">
@@ -982,7 +982,7 @@ Need help? Contact support@koderspark.com
                         Questions? Reach out to us at <a href="mailto:support@koderspark.com" style="color: #667eea;">support@koderspark.com</a>
                     </p>
                     <p class="footer-text">
-                        © 2025 Koderspark HireMe. All rights reserved.
+                        © 2025 Hire In Minutes. All rights reserved.
                     </p>
                     <p class="unsubscribe-text">
                         You can unsubscribe or update your preferences anytime from your account settings.
@@ -996,7 +996,7 @@ Need help? Contact support@koderspark.com
 
 Hi ${userName},
 
-Welcome to the Koderspark HireMe notification family! You've successfully enabled email notifications.
+Welcome to the Hire In Minutes notification family! You've successfully enabled email notifications.
 
 What You'll Receive:
 • Job Application Updates - When recruiters view or update your applications
@@ -1010,19 +1010,19 @@ You can manage your notification preferences anytime in your account settings.
 
 Questions? Contact support@koderspark.com
 
-© 2025 Koderspark HireMe. All rights reserved.`
+© 2025 Hire In Minutes. All rights reserved.`
     }),
 
     // Two-Factor Authentication Setup Email Template
     twoFactorSetup: (otp, userName = 'User') => ({
-        subject: '🔐 Enable Two-Factor Authentication - Koderspark HireMe',
+        subject: '🔐 Enable Two-Factor Authentication - Hire In Minutes',
         html: `
         <!DOCTYPE html>
         <html lang="en">
         <head>
             <meta charset="UTF-8">
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <title>Enable 2FA - Koderspark HireMe</title>
+            <title>Enable 2FA - Hire In Minutes</title>
             <style>
                 body {
                     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -1228,7 +1228,7 @@ Questions? Contact support@koderspark.com
         <body>
             <div class="container">
                 <div class="header">
-                    <div class="logo">🔐 Koderspark HireMe</div>
+                    <div class="logo">🔐 Hire In Minutes</div>
                     <p class="tagline">Enhanced Security Setup</p>
                 </div>
 
@@ -1236,7 +1236,7 @@ Questions? Contact support@koderspark.com
                     <h1 class="greeting">Enable Two-Factor Authentication</h1>
 
                     <p class="message">
-                        Hi ${userName}, you've requested to enable two-factor authentication (2FA) for your Koderspark HireMe account. This adds an extra layer of security to protect your account.
+                        Hi ${userName}, you've requested to enable two-factor authentication (2FA) for your Hire In Minutes account. This adds an extra layer of security to protect your account.
                     </p>
 
                     <div class="security-banner">
@@ -1303,7 +1303,7 @@ Questions? Contact support@koderspark.com
                         Need help? Contact our support team at <a href="mailto:support@koderspark.com" style="color: #667eea;">support@koderspark.com</a>
                     </p>
                     <p class="footer-text">
-                        © 2025 Koderspark HireMe. All rights reserved.
+                        © 2025 Hire In Minutes. All rights reserved.
                     </p>
                 </div>
             </div>
@@ -1314,7 +1314,7 @@ Questions? Contact support@koderspark.com
 
 Hi ${userName},
 
-You've requested to enable two-factor authentication (2FA) for your Koderspark HireMe account.
+You've requested to enable two-factor authentication (2FA) for your Hire In Minutes account.
 
 Your setup verification code: ${otp}
 
@@ -1330,19 +1330,19 @@ Enter this code in the 2FA setup form to complete activation.
 
 Need help? Contact support@koderspark.com
 
-© 2025 Koderspark HireMe. All rights reserved.`
+© 2025 Hire In Minutes. All rights reserved.`
     }),
 
     // Two-Factor Authentication Login Email Template
     twoFactorLogin: (otp, userName = 'User') => ({
-        subject: '🔐 Login Verification Required - Koderspark HireMe',
+        subject: '🔐 Login Verification Required - Hire In Minutes',
         html: `
         <!DOCTYPE html>
         <html lang="en">
         <head>
             <meta charset="UTF-8">
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <title>Login Verification - Koderspark HireMe</title>
+            <title>Login Verification - Hire In Minutes</title>
             <style>
                 body {
                     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -1507,7 +1507,7 @@ Need help? Contact support@koderspark.com
         <body>
             <div class="container">
                 <div class="header">
-                    <div class="logo">🔐 Koderspark HireMe</div>
+                    <div class="logo">🔐 Hire In Minutes</div>
                     <p class="tagline">Secure Login Verification</p>
                 </div>
 
@@ -1515,7 +1515,7 @@ Need help? Contact support@koderspark.com
                     <h1 class="greeting">Login Verification Required</h1>
 
                     <p class="message">
-                        Hi ${userName}, we detected a login attempt to your Koderspark HireMe account. For your security, we need to verify your identity.
+                        Hi ${userName}, we detected a login attempt to your Hire In Minutes account. For your security, we need to verify your identity.
                     </p>
 
                     <div class="login-banner">
@@ -1555,7 +1555,7 @@ Need help? Contact support@koderspark.com
                         Didn't request this login? <a href="mailto:security@koderspark.com" style="color: #667eea;">Contact our security team</a>
                     </p>
                     <p class="footer-text">
-                        © 2025 Koderspark HireMe. All rights reserved.
+                        © 2025 Hire In Minutes. All rights reserved.
                     </p>
                 </div>
             </div>
@@ -1566,7 +1566,7 @@ Need help? Contact support@koderspark.com
 
 Hi ${userName},
 
-We detected a login attempt to your Koderspark HireMe account. For your security, please verify your identity.
+We detected a login attempt to your Hire In Minutes account. For your security, please verify your identity.
 
 Your login verification code: ${otp}
 
@@ -1581,19 +1581,19 @@ If you didn't attempt to log in, please change your password immediately and con
 
 Didn't request this login? Contact security@koderspark.com
 
-© 2025 Koderspark HireMe. All rights reserved.`
+© 2025 Hire In Minutes. All rights reserved.`
     }),
 
     // Account Deletion Confirmation Email Template
     accountDeletion: (userName = 'User') => ({
-        subject: 'Account Deletion Confirmation - Koderspark HireMe',
+        subject: 'Account Deletion Confirmation - Hire In Minutes',
         html: `
         <!DOCTYPE html>
         <html lang="en">
         <head>
             <meta charset="UTF-8">
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <title>Account Deletion Confirmation - Koderspark HireMe</title>
+            <title>Account Deletion Confirmation - Hire In Minutes</title>
             <style>
                 body {
                     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -1705,7 +1705,7 @@ Didn't request this login? Contact security@koderspark.com
         <body>
             <div class="container">
                 <div class="header">
-                    <div class="logo">🗑️ Koderspark HireMe</div>
+                    <div class="logo">🗑️ Hire In Minutes</div>
                     <p class="tagline">Account Deletion Confirmation</p>
                 </div>
 
@@ -1713,7 +1713,7 @@ Didn't request this login? Contact security@koderspark.com
                     <h1 class="greeting">Account Successfully Deleted</h1>
 
                     <p class="message">
-                        Hi ${userName}, your Koderspark HireMe account has been permanently deleted as requested.
+                        Hi ${userName}, your Hire In Minutes account has been permanently deleted as requested.
                     </p>
 
                     <div class="warning-box">
@@ -1746,7 +1746,7 @@ Didn't request this login? Contact security@koderspark.com
                         Need help? <a href="mailto:support@koderspark.com" style="color: #667eea;">Contact our support team</a>
                     </p>
                     <p class="footer-text">
-                        © 2025 Koderspark HireMe. All rights reserved.
+                        © 2025 Hire In Minutes. All rights reserved.
                     </p>
                 </div>
             </div>
@@ -1757,7 +1757,7 @@ Didn't request this login? Contact security@koderspark.com
 
 Hi ${userName},
 
-Your Koderspark HireMe account has been permanently deleted as requested.
+Your Hire In Minutes account has been permanently deleted as requested.
 
 ⚠️ IMPORTANT: This action cannot be undone. Your account and all associated data have been permanently removed from our system.
 
@@ -1775,7 +1775,7 @@ If you change your mind or believe this was done in error, please contact our su
 
 Need help? Contact support@koderspark.com
 
-© 2025 Koderspark HireMe. All rights reserved.`
+© 2025 Hire In Minutes. All rights reserved.`
     }),
 
     // Bulk Admin Message Template
@@ -1863,7 +1863,7 @@ Need help? Contact support@koderspark.com
         <body>
             <div class="container">
                 <div class="header">
-                    <div class="logo">🚀 Koderspark HireMe</div>
+                    <div class="logo">🚀 Hire In Minutes</div>
                     <p class="tagline">Official Announcement</p>
                 </div>
 
@@ -1877,7 +1877,7 @@ Need help? Contact support@koderspark.com
                         Need help? <a href="mailto:support@koderspark.com" style="color: #667eea;">Contact our support team</a>
                     </p>
                     <p class="footer-text">
-                        © 2025 Koderspark HireMe. All rights reserved.
+                        © 2025 Hire In Minutes. All rights reserved.
                     </p>
                 </div>
             </div>
@@ -1890,7 +1890,7 @@ ${message}
 
 Need help? Contact support@koderspark.com
 
-© 2025 Koderspark HireMe. All rights reserved.`
+© 2025 Hire In Minutes. All rights reserved.`
     })
 };
 

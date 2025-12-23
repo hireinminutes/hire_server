@@ -12,6 +12,10 @@ const contactSchema = new mongoose.Schema({
     trim: true,
     lowercase: true
   },
+  phone: {
+    type: String,
+    trim: true
+  },
   subject: {
     type: String,
     required: true,

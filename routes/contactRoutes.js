@@ -5,6 +5,7 @@ const { protect, adminOnly } = require('../middlewares/authMiddleware');
 
 // Public route - Submit contact form
 router.post('/submit', contactController.submitContact);
+router.post('/message', contactController.submitContact); // Alias for user requirement
 
 // Admin routes - Protected
 router.get('/all', protect, adminOnly, contactController.getAllContacts);

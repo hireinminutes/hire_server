@@ -18,6 +18,7 @@ const contactRoutes = require('./routes/contactRoutes');
 const collegeRoutes = require('./routes/collegeRoutes');
 const paymentRoutes = require('./routes/paymentRoutes');
 const adRoutes = require('./routes/adRoutes');
+const recruiterRoutes = require('./routes/recruiterRoutes');
 
 // Import middleware
 const errorHandler = require('./middlewares/errorHandler');
@@ -73,6 +74,7 @@ app.use('/api/contact', contactRoutes);
 app.use('/api/college', collegeRoutes);
 app.use('/api/payment', paymentRoutes);
 app.use('/api/ads', adRoutes);
+app.use('/api/recruiter', recruiterRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {

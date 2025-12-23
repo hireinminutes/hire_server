@@ -135,11 +135,92 @@ const register = async (req, res, next) => {
       Admin.findOne({ email })
     ]);
 
-    if (recruiterExists || candidateExists || collegeExists || adminExists) {
-      return res.status(400).json({
-        success: false,
-        message: 'User already exists'
-      });
+    const existingUser = recruiterExists || candidateExists || collegeExists || adminExists;
+
+    if (existingUser) {
+      if (existingUser.isVerified) {
+        return res.status(400).json({
+          success: false,
+          message: 'User already exists'
+        });
+      }
+
+      // User exists but is NOT verified
+      // Check if the role is the same
+      let existingRole = '';
+      if (recruiterExists) existingRole = 'employer';
+      else if (candidateExists) existingRole = 'job_seeker';
+      else if (collegeExists) existingRole = 'college';
+      else if (adminExists) existingRole = 'admin';
+
+      if (existingRole !== role) {
+        // Different role: Delete the old unverified account and allow new creation
+        if (recruiterExists) await Recruiter.findByIdAndDelete(recruiterExists._id);
+        if (candidateExists) await Candidate.findByIdAndDelete(candidateExists._id);
+        if (collegeExists) await College.findByIdAndDelete(collegeExists._id);
+        if (adminExists) await Admin.findByIdAndDelete(adminExists._id);
+        // Fall through to creation logic below
+      } else {
+        // Same role: Update details and resend OTP
+
+        // Update fields
+        existingUser.fullName = fullName || existingUser.fullName; // Update if provided
+        if (role === 'college') {
+          existingUser.name = fullName || otherFields.name || existingUser.name;
+        }
+
+        // Update password (will be hashed by pre-save hook)
+        existingUser.password = password;
+
+        // Update profile/other fields if necessary. 
+        // For simplicity, we overwrite the profile with the new initial state if it's a structural role
+        if (role === 'employer' || role === 'job_seeker') {
+          // We can selectively update profile fields here if stricter merging is needed, 
+          // but for unverified registration retry, resetting to new input is usually expected.
+          // However, replacing the entire profile object might be risky if Mongoose doesn't handle nested replacement well with .set
+          // Let's rely on standard updates.
+          if (userData.profile) {
+            existingUser.profile = userData.profile;
+          }
+        } else if (role === 'college') {
+          if (userData.address) existingUser.address = userData.address;
+          if (userData.description) existingUser.description = userData.description;
+          // ... map other college fields if critical, but standard registration usually just needs auth + basic info
+        }
+
+        // Generate NEW OTP
+        const otp = crypto.randomInt(100000, 999999).toString();
+        const salt = await bcrypt.genSalt(10);
+        const otpHash = await bcrypt.hash(otp, salt);
+        const otpExpiresAt = new Date(Date.now() + 10 * 60 * 1000);
+
+        existingUser.otpHash = otpHash;
+        existingUser.otpExpiresAt = otpExpiresAt;
+        existingUser.otpAttempts = 0;
+
+        await existingUser.save();
+
+        // Send OTP Email
+        const emailTemplate = emailTemplates.otpVerification(otp, fullName || existingUser.fullName || 'User');
+        sendEmail({
+          email: existingUser.email,
+          subject: emailTemplate.subject,
+          message: emailTemplate.text,
+          html: emailTemplate.html
+        }).catch(err => {
+          console.error('Background OTP email sending failed:', err);
+        });
+
+        return res.status(200).json({
+          success: true,
+          message: 'User already registered but not verified. OTP resent to email.',
+          data: {
+            userId: existingUser._id,
+            email: existingUser.email,
+            role: role
+          }
+        });
+      }
     }
 
     // For admin accounts, skip OTP and auto-verify
@@ -1247,6 +1328,7 @@ const uploadProfilePicture = async (req, res, next) => {
 // @desc    Forgot password - send OTP
 // @route   POST /api/auth/forgot-password
 // @access  Public
+// Forgot Password
 const forgotPassword = async (req, res, next) => {
   try {
     const { email, role } = req.body;
@@ -1266,6 +1348,8 @@ const forgotPassword = async (req, res, next) => {
       Model = Recruiter;
     } else if (role === 'college') {
       Model = College;
+    } else if (role === 'admin') {
+      Model = Admin;
     } else {
       return res.status(400).json({
         success: false,
@@ -1282,9 +1366,18 @@ const forgotPassword = async (req, res, next) => {
       });
     }
 
-    // For testing purposes, we'll just return success
-    // In production, you would send an actual email with OTP
-    const otp = '123456'; // For testing
+    // Generate specific 6-digit OTP
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+
+    // Hash OTP
+    const salt = await bcrypt.genSalt(10);
+    user.otpHash = await bcrypt.hash(otp, salt);
+
+    // Set expiry to 10 minutes
+    user.otpExpiresAt = Date.now() + 10 * 60 * 1000;
+    user.otpAttempts = 0;
+
+    await user.save({ validateBeforeSave: false });
 
     // Send Password Reset Email
     try {
@@ -1295,18 +1388,24 @@ const forgotPassword = async (req, res, next) => {
         message: emailTemplate.text,
         html: emailTemplate.html
       });
+
+      res.status(200).json({
+        success: true,
+        message: 'Password reset OTP sent to your email address.'
+      });
     } catch (emailError) {
       console.error('Password reset email failed:', emailError);
+      // Clean up OTP fields if email fails
+      user.otpHash = undefined;
+      user.otpExpiresAt = undefined;
+      user.otpAttempts = undefined;
+      await user.save({ validateBeforeSave: false });
+
       return res.status(500).json({
         success: false,
         message: 'Failed to send password reset email'
       });
     }
-
-    res.json({
-      success: true,
-      message: 'Password reset OTP sent to your email address.'
-    });
 
   } catch (error) {
     next(error);
@@ -1316,23 +1415,13 @@ const forgotPassword = async (req, res, next) => {
 // @desc    Reset password with OTP
 // @route   POST /api/auth/reset-password
 // @access  Public
+// Reset Password
 const resetPassword = async (req, res, next) => {
   try {
     const { email, otp, newPassword, role } = req.body;
 
-    if (!email || !otp || !newPassword || !role) {
-      return res.status(400).json({
-        success: false,
-        message: 'All fields are required'
-      });
-    }
-
-    // Validate OTP (hardcoded for testing)
-    if (otp !== '123456') {
-      return res.status(400).json({
-        success: false,
-        message: 'Invalid OTP'
-      });
+    if (!email || !otp || !newPassword || !role) { // Added validation for all fields
+      return res.status(400).json({ success: false, message: 'All fields are required' });
     }
 
     // Validate password length
@@ -1343,36 +1432,67 @@ const resetPassword = async (req, res, next) => {
       });
     }
 
-    // Determine the model based on role
     let Model;
-    if (role === 'job_seeker') {
+    if (role === 'job_seeker') { // Changed from 'candidate' to 'job_seeker'
       Model = Candidate;
-    } else if (role === 'employer') {
+    } else if (role === 'employer') { // Changed from 'recruiter' to 'employer'
       Model = Recruiter;
-    } else if (role === 'college') {
+    } else if (role === 'college') { // Added 'college' role
       Model = College;
+    } else if (role === 'admin') { // Added 'admin' role
+      Model = Admin;
     } else {
-      return res.status(400).json({
-        success: false,
-        message: 'Invalid role'
-      });
+      return res.status(400).json({ success: false, message: 'Invalid role' });
     }
 
-    // Find and update user
-    const user = await Model.findOne({ email });
+    // Explicitly select the fields we need since they might be select: false in schema
+    const user = await Model.findOne({ email }).select('+otpHash +otpExpiresAt +otpAttempts');
+
     if (!user) {
-      return res.status(404).json({
-        success: false,
-        message: 'User not found'
-      });
+      return res.status(400).json({ success: false, message: 'Invalid request or user not found' }); // Clarified message
     }
 
-    user.password = newPassword;
-    await user.save();
+    // Check expiry
+    if (!user.otpExpiresAt || user.otpExpiresAt < Date.now()) {
+      // Clear OTP fields if expired
+      user.otpHash = undefined;
+      user.otpExpiresAt = undefined;
+      user.otpAttempts = undefined;
+      await user.save({ validateBeforeSave: false });
+      return res.status(400).json({ success: false, message: 'OTP expired or invalid. Please request a new one.' });
+    }
 
-    res.json({
+    // Check attempts
+    if (user.otpAttempts >= 3) {
+      // Clearing OTP to force a new request is safer to prevent infinite guessing.
+      user.otpHash = undefined;
+      user.otpExpiresAt = undefined;
+      user.otpAttempts = undefined;
+      await user.save({ validateBeforeSave: false });
+      return res.status(400).json({ success: false, message: 'Too many failed attempts. Please request a new OTP.' });
+    }
+
+    // Verify OTP
+    const isMatch = await bcrypt.compare(otp, user.otpHash);
+    if (!isMatch) {
+      user.otpAttempts += 1;
+      await user.save({ validateBeforeSave: false });
+      return res.status(400).json({ success: false, message: 'Invalid OTP' });
+    }
+
+    // OTP is valid, reset password
+    user.password = newPassword;
+
+    // Clear OTP fields
+    user.otpHash = undefined;
+    user.otpExpiresAt = undefined;
+    user.otpAttempts = undefined;
+
+    await user.save(); // This will trigger pre-save hook to hash password
+
+    res.status(200).json({
       success: true,
-      message: 'Password reset successfully'
+      message: 'Password reset successful. You can now login.'
     });
 
   } catch (error) {

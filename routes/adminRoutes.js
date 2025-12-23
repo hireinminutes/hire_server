@@ -62,7 +62,7 @@ router.get('/candidates', protect, adminOnly, async (req, res) => {
 router.put('/candidates/:id/score', protect, adminOnly, async (req, res) => {
   try {
     const { id } = req.params;
-    const { score, level, verifiedSkills } = req.body;
+    const { score, level, verifiedSkills, isVerified } = req.body;
 
     const candidate = await Candidate.findById(id);
     if (!candidate) {
@@ -78,6 +78,14 @@ router.put('/candidates/:id/score', protect, adminOnly, async (req, res) => {
     candidate.skillPassport.verifiedSkills = verifiedSkills || [];
     candidate.skillPassport.verifiedAt = new Date();
     candidate.skillPassport.badgeId = `SP-${Math.floor(1000 + Math.random() * 9000)}-${new Date().getFullYear().toString().substr(-2)}`;
+
+    // Update verification status if provided
+    if (isVerified !== undefined) {
+      candidate.isProfileVerified = isVerified;
+      if (isVerified) {
+        candidate.verificationDate = new Date();
+      }
+    }
 
     await candidate.save();
 
@@ -171,8 +179,14 @@ router.get('/verified-candidates', protect, async (req, res) => {
       });
     }
 
-    const verifiedCandidates = await Candidate.find({ isProfileVerified: true })
-      .select('fullName email isVerified isProfileVerified createdAt profile.phone profile.location profile.experience profile.skills profile.education profile.socialProfiles profile.projects')
+    // Build query
+    const query = { isProfileVerified: true };
+    if (req.query.plan && req.query.plan !== 'all') {
+      query.plan = req.query.plan;
+    }
+
+    const verifiedCandidates = await Candidate.find(query)
+      .select('fullName email isVerified isProfileVerified createdAt profile.phone profile.location profile.experience profile.skills profile.education profile.socialProfiles profile.projects plan')
       .sort({ createdAt: -1 })
       .lean();
 
@@ -203,7 +217,8 @@ router.get('/verified-candidates', protect, async (req, res) => {
               (candidate.profile.projects[0].demoLink || '') : ''
           },
           verified: candidate.isProfileVerified,
-          verifiedAt: candidate.createdAt
+          verifiedAt: candidate.createdAt,
+          plan: candidate.plan || 'free'
         };
       } catch (err) {
         console.error('Error processing candidate:', candidate._id, err);
@@ -276,6 +291,46 @@ router.get('/recruiters/pending', protect, adminOnly, getPendingRecruiters);
 router.put('/recruiters/:id/approve', protect, adminOnly, approveRecruiter);
 router.put('/recruiters/:id/reject', protect, adminOnly, rejectRecruiter);
 
+const contactController = require('../controllers/contactController');
+router.get('/messages', protect, adminOnly, contactController.getAllContacts);
+
+// Admin Notifications
+router.get('/notifications', protect, adminOnly, async (req, res) => {
+  try {
+    const notifications = await Notification.find({
+      recipient: req.user._id,
+      recipientModel: 'Admin'
+    }).sort({ createdAt: -1 });
+
+    res.json({
+      success: true,
+      data: notifications
+    });
+  } catch (error) {
+    console.error('Error fetching admin notifications:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+});
+
+router.put('/notifications/:id/read', protect, adminOnly, async (req, res) => {
+  try {
+    const notification = await Notification.findByIdAndUpdate(
+      req.params.id,
+      { read: true, readAt: new Date() },
+      { new: true }
+    );
+
+    if (!notification) {
+      return res.status(404).json({ success: false, message: 'Notification not found' });
+    }
+
+    res.json({ success: true, data: notification });
+  } catch (error) {
+    console.error('Error marking notification as read:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+});
+
 // Keep existing routes but ensuring no conflict.
 // The previous "recruiter-approvals" routes used RecruiterApplication which seems unused by current Auth flow.
 // We will keep them just in case but the UI will likely use the new endpoints.
@@ -308,9 +363,10 @@ router.get('/recruiters/:recruiterId/profile', protect, adminOnly, async (req, r
     }
 
     // Format response with application details
-    const personalInfo = application.personalInfo || {};
-    const companyInfo = application.companyInfo || {};
-    const authorityInfo = application.authorityInfo || {};
+    const onboarding = recruiter.recruiterOnboardingDetails || {};
+    const personalInfo = application?.personalInfo || {};
+    const companyInfo = application?.companyInfo || {};
+    const authorityInfo = application?.authorityInfo || {};
 
     const formattedProfile = {
       _id: recruiter._id,
@@ -319,26 +375,26 @@ router.get('/recruiters/:recruiterId/profile', protect, adminOnly, async (req, r
       isVerified: recruiter.isVerified,
       createdAt: recruiter.createdAt,
       recruiterOnboardingDetails: {
-        phone: personalInfo.phone || 'Not specified',
-        phoneVerified: personalInfo.phoneVerified || false,
-        jobTitle: authorityInfo.jobTitle || 'Not specified',
-        employmentProof: authorityInfo.employmentProof || null,
+        phone: onboarding.phone || personalInfo.phone || 'Not specified',
+        phoneVerified: onboarding.phoneVerified || personalInfo.phoneVerified || false,
+        jobTitle: onboarding.jobTitle || authorityInfo.jobTitle || 'Not specified',
+        employmentProof: onboarding.employmentProof || authorityInfo.employmentProof || null,
         company: {
-          name: companyInfo.name || 'Not specified',
-          website: companyInfo.website || 'Not specified',
-          logo: companyInfo.logo || null,
-          size: companyInfo.size || 'Not specified',
-          address: companyInfo.address || 'Not specified',
-          images: companyInfo.images || [],
+          name: onboarding.company?.name || companyInfo.name || 'Not specified',
+          website: onboarding.company?.website || companyInfo.website || 'Not specified',
+          logo: onboarding.company?.logo || companyInfo.logo || null,
+          size: onboarding.company?.size || companyInfo.size || 'Not specified',
+          address: onboarding.company?.address || companyInfo.address || 'Not specified',
+          images: onboarding.company?.images || companyInfo.images || [],
           socialLinks: {
-            facebook: companyInfo.socialLinks?.facebook || 'Not specified',
-            linkedin: companyInfo.socialLinks?.linkedin || 'Not specified',
-            twitter: companyInfo.socialLinks?.twitter || 'Not specified',
-            instagram: companyInfo.socialLinks?.instagram || 'Not specified'
+            facebook: onboarding.company?.socialLinks?.facebook || companyInfo.socialLinks?.facebook || 'Not specified',
+            linkedin: onboarding.company?.socialLinks?.linkedin || companyInfo.socialLinks?.linkedin || 'Not specified',
+            twitter: onboarding.company?.socialLinks?.twitter || companyInfo.socialLinks?.twitter || 'Not specified',
+            instagram: onboarding.company?.socialLinks?.instagram || companyInfo.socialLinks?.instagram || 'Not specified'
           }
         },
-        isComplete: true, // Application exists, so it's complete
-        submittedAt: application.submittedAt
+        isComplete: onboarding.isComplete || !!application,
+        submittedAt: onboarding.submittedAt || application?.submittedAt
       }
     };
 

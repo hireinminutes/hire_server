@@ -166,4 +166,57 @@ router.put('/credits', protect, async (req, res) => {
   }
 });
 
+// Request guaranteed interview (Job Seeker only) - General request to Admin
+router.post('/request-interview', protect, async (req, res) => {
+  try {
+    const candidate = await Candidate.findById(req.user.id);
+    if (!candidate) {
+      return res.status(404).json({ success: false, message: 'Candidate not found' });
+    }
+
+    if (candidate.interviewCount <= 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'You have no interview credits left. Please upgrade your plan.'
+      });
+    }
+
+    // Decrement credit
+    candidate.interviewCount -= 1;
+    await candidate.save();
+
+    // Notify all Admins
+    const Admin = require('../models/Admin');
+    const Notification = require('../models/Notification');
+    const admins = await Admin.find({ isActive: true });
+
+    const notificationPromises = admins.map(admin => {
+      return Notification.create({
+        recipient: admin._id,
+        recipientModel: 'Admin',
+        type: 'interview_invite',
+        title: 'New Interview Request!',
+        message: `${candidate.fullName} (${candidate.email}) has requested a guaranteed interview.`,
+        data: {
+          candidateId: candidate._id,
+          candidateName: candidate.fullName
+        }
+      });
+    });
+
+    await Promise.all(notificationPromises);
+
+    res.json({
+      success: true,
+      message: 'Interview requested successfully! Our team will contact you soon.',
+      data: {
+        interviewCount: candidate.interviewCount
+      }
+    });
+  } catch (error) {
+    console.error('Error requesting interview:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+});
+
 module.exports = router;

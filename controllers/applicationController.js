@@ -125,7 +125,7 @@ const getApplication = async (req, res, next) => {
 // @access  Private (Job Seeker only)
 const createApplication = async (req, res, next) => {
   try {
-    const { jobId, coverLetter, expectedSalary, availability } = req.body;
+    const { jobId, coverLetter, expectedSalary, availability, portfolioLink, resumeLink } = req.body;
 
     // Check if job exists and is active
     const job = await Job.findById(jobId);
@@ -133,6 +133,14 @@ const createApplication = async (req, res, next) => {
       return res.status(404).json({
         success: false,
         message: 'Job not found or not active'
+      });
+    }
+
+    // Check user plan (Free users cannot apply)
+    if (req.user.plan === 'free') {
+      return res.status(403).json({
+        success: false,
+        message: 'Free plan users cannot apply for jobs. Please upgrade to Starter, Premium, or Pro.'
       });
     }
 
@@ -175,7 +183,9 @@ const createApplication = async (req, res, next) => {
       coverLetter,
       resume,
       expectedSalary,
-      availability
+      availability,
+      portfolioLink,
+      resumeLink
     });
 
     // Increment application count on job

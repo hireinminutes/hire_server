@@ -20,6 +20,14 @@ const applicationSchema = new mongoose.Schema({
     type: String,
     maxlength: [2000, 'Cover letter cannot exceed 2000 characters']
   },
+  portfolioLink: {
+    type: String,
+    trim: true
+  },
+  resumeLink: {
+    type: String,
+    trim: true
+  },
   resume: {
     filename: String,
     originalName: String,

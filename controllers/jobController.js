@@ -66,7 +66,7 @@ const getJobs = async (req, res, next) => {
     // Execute query with optimizations
     const jobs = await Job.find(query)
       .select('jobDetails.basicInfo jobDetails.location jobDetails.compensation jobDetails.description.roleSummary postedBy createdAt status') // Only fetch needed fields
-      .populate('postedBy', 'fullName profile.company.name profile.company.logo isVerified recruiterOnboardingDetails.company.name recruiterOnboardingDetails.company.logo')
+      .populate('postedBy', 'fullName profile recruiterOnboardingDetails isVerified')
       .sort({ createdAt: -1 })
       .limit(limit)
       .skip(startIndex)
@@ -104,7 +104,7 @@ const getJob = async (req, res, next) => {
     let query = Job.findById(req.params.id);
 
     if (!basicOnly) {
-      query = query.populate('postedBy', 'profile.company recruiterOnboardingDetails.company isVerified');
+      query = query.populate('postedBy', 'profile recruiterOnboardingDetails isVerified');
     }
 
     const job = await query;
@@ -138,7 +138,7 @@ const getJobCompanyDetails = async (req, res, next) => {
   try {
     const job = await Job.findById(req.params.id)
       .select('postedBy')
-      .populate('postedBy', 'profile.company recruiterOnboardingDetails.company');
+      .populate('postedBy', 'profile recruiterOnboardingDetails');
 
     if (!job) {
       return res.status(404).json({

@@ -17,14 +17,47 @@ const createOrder = async (req, res) => {
     console.log('Create order request:', req.body);
     console.log('User:', req.user);
 
-    const { amount, currency = 'INR', planType } = req.body;
+    const { planType, currency = 'INR' } = req.body;
+    const currentPlan = req.user.plan || 'free';
 
-    // Validate amount (minimum ₹1)
-    if (!amount || amount < 100) {
-      console.log('Invalid amount:', amount);
+    // 1. Determine Base Amount (in Paise) based on Plan Upgrade Rules
+    let amount = 0;
+    const planPrices = {
+      starter: 9900,
+      premium: 49900,
+      pro: 99900
+    };
+
+    // Prevent direct purchase of currently active plan or downgrade
+    const planLevels = { free: 0, starter: 1, premium: 2, pro: 3 };
+    const targetLevel = planLevels[planType];
+    const currentLevel = planLevels[currentPlan];
+
+    if (targetLevel <= currentLevel) {
       return res.status(400).json({
         success: false,
-        message: 'Invalid amount. Minimum amount is ₹1.'
+        message: targetLevel === currentLevel
+          ? `You are already on the ${planType} plan.`
+          : `Downgrades are not allowed via this interface.`
+      });
+    }
+
+    // Default price if coming from free
+    amount = planPrices[planType];
+
+    // Apply Differential Pricing Logic (Differential Prices as per User Rules)
+    if (currentPlan === 'starter') {
+      if (planType === 'premium') amount = 39900; // Expected ₹399
+      if (planType === 'pro') amount = 89900;     // Expected ₹899
+    } else if (currentPlan === 'premium') {
+      if (planType === 'pro') amount = 50000;     // 999 - 499 = ₹500
+    }
+
+    if (!amount || amount < 100) {
+      console.log('Invalid amount calculation:', { amount, planType, currentPlan });
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid plan selecion or price calculation.'
       });
     }
 

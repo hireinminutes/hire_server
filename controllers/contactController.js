@@ -3,13 +3,13 @@ const Contact = require('../models/Contact');
 // Submit contact form
 exports.submitContact = async (req, res) => {
   try {
-    const { name, email, subject, message, userType } = req.body;
+    const { name, email, phone, subject, message, userType } = req.body;
 
     // Validate required fields
     if (!name || !email || !subject || !message) {
-      return res.status(400).json({ 
-        success: false, 
-        message: 'All fields are required' 
+      return res.status(400).json({
+        success: false,
+        message: 'All fields are required'
       });
     }
 
@@ -17,6 +17,7 @@ exports.submitContact = async (req, res) => {
     const contact = await Contact.create({
       name,
       email,
+      phone,
       subject,
       message,
       userType: userType || 'other'
@@ -40,7 +41,7 @@ exports.submitContact = async (req, res) => {
 exports.getAllContacts = async (req, res) => {
   try {
     const { status, isRead, page = 1, limit = 20 } = req.query;
-    
+
     // Build query
     const query = {};
     if (status) query.status = status;
@@ -110,11 +111,11 @@ exports.updateContactStatus = async (req, res) => {
     if (status) updateData.status = status;
     if (adminNotes !== undefined) updateData.adminNotes = adminNotes;
     if (isRead !== undefined) updateData.isRead = isRead;
-    
+
     if (status === 'in-progress' && !updateData.respondedAt) {
       updateData.respondedAt = new Date();
     }
-    
+
     if (status === 'resolved' || status === 'closed') {
       updateData.resolvedBy = req.user._id;
     }
@@ -209,7 +210,7 @@ exports.getContactStats = async (req, res) => {
     const inProgressContacts = await Contact.countDocuments({ status: 'in-progress' });
     const resolvedContacts = await Contact.countDocuments({ status: 'resolved' });
     const unreadContacts = await Contact.countDocuments({ isRead: false });
-    
+
     // Get contacts by user type
     const byUserType = await Contact.aggregate([
       {

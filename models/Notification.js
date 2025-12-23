@@ -25,7 +25,8 @@ const notificationSchema = new mongoose.Schema({
       'meeting_scheduled',
       'job_posted',
       'profile_updated',
-      'system_notification'
+      'system_notification',
+      'interview_invite'
     ]
   },
   title: {

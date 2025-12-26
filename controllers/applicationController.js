@@ -136,14 +136,6 @@ const createApplication = async (req, res, next) => {
       });
     }
 
-    // Check user plan (Free users cannot apply)
-    if (req.user.plan === 'free') {
-      return res.status(403).json({
-        success: false,
-        message: 'Free plan users cannot apply for jobs. Please upgrade to Starter, Premium, or Pro.'
-      });
-    }
-
     // Check if user already applied
     const existingApplication = await Application.findOne({
       job: jobId,

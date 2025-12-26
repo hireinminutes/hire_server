@@ -23,13 +23,20 @@ const createOrder = async (req, res) => {
     // 1. Determine Base Amount (in Paise) based on Plan Upgrade Rules
     let amount = 0;
     const planPrices = {
-      starter: 9900,
       premium: 49900,
       pro: 99900
     };
 
+    // Prevent purchase of Starter plan (deprecated)
+    if (planType === 'starter') {
+      return res.status(400).json({
+        success: false,
+        message: 'The Starter plan is no longer available. Please choose Premium or Pro plan.'
+      });
+    }
+
     // Prevent direct purchase of currently active plan or downgrade
-    const planLevels = { free: 0, starter: 1, premium: 2, pro: 3 };
+    const planLevels = { free: 0, premium: 1, pro: 2 };
     const targetLevel = planLevels[planType];
     const currentLevel = planLevels[currentPlan];
 
@@ -46,10 +53,7 @@ const createOrder = async (req, res) => {
     amount = planPrices[planType];
 
     // Apply Differential Pricing Logic (Differential Prices as per User Rules)
-    if (currentPlan === 'starter') {
-      if (planType === 'premium') amount = 39900; // Expected ₹399
-      if (planType === 'pro') amount = 89900;     // Expected ₹899
-    } else if (currentPlan === 'premium') {
+    if (currentPlan === 'premium') {
       if (planType === 'pro') amount = 50000;     // 999 - 499 = ₹500
     }
 
@@ -210,10 +214,10 @@ const verifyPayment = async (req, res) => {
     if (['starter', 'premium', 'pro'].includes(planType)) {
       updateData.plan = planType;
 
-      // Set interview count
+      // Set interview count (Starter gets 0, same as free)
       if (planType === 'premium') updateData.interviewCount = 1;
       else if (planType === 'pro') updateData.interviewCount = 3;
-      else updateData.interviewCount = 0; // starter
+      else updateData.interviewCount = 0; // starter or any other
 
       await Candidate.findByIdAndUpdate(req.user.id, updateData);
       console.log(`User plan updated to ${planType} successfully`);

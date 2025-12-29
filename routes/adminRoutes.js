@@ -339,65 +339,72 @@ router.put('/notifications/:id/read', protect, adminOnly, async (req, res) => {
 router.get('/recruiters/:recruiterId/profile', protect, adminOnly, async (req, res) => {
   try {
     const { recruiterId } = req.params;
+    console.log('Fetching profile for recruiter ID:', recruiterId);
 
-    const recruiter = await Recruiter.findById(recruiterId)
-      .select('fullName email createdAt isVerified');
+    const recruiter = await Recruiter.findById(recruiterId);
 
     if (!recruiter) {
+      console.error('Recruiter not found:', recruiterId);
       return res.status(404).json({
         success: false,
         message: 'Recruiter not found'
       });
     }
 
-    // Get the latest application for this recruiter
-    const application = await require('../models/RecruiterApplication').findOne({
-      recruiter: recruiterId
-    }).sort({ createdAt: -1 });
+    console.log('Recruiter found:', recruiter.fullName);
 
-    if (!application) {
-      return res.status(404).json({
-        success: false,
-        message: 'No application found for this recruiter'
-      });
+    // Try to get the latest application for this recruiter
+    let application = null;
+    try {
+      const RecruiterApplication = require('../models/RecruiterApplication');
+      application = await RecruiterApplication.findOne({
+        recruiter: recruiterId
+      }).sort({ createdAt: -1 });
+      if (application) {
+        console.log('Found RecruiterApplication');
+      }
+    } catch (err) {
+      console.log('No RecruiterApplication model or no application found');
     }
 
-    // Format response with application details
+    // Format response with application details or recruiter's own data
     const onboarding = recruiter.recruiterOnboardingDetails || {};
+    const profile = recruiter.profile || {};
     const personalInfo = application?.personalInfo || {};
     const companyInfo = application?.companyInfo || {};
     const authorityInfo = application?.authorityInfo || {};
 
     const formattedProfile = {
       _id: recruiter._id,
-      fullName: recruiter.fullName,
-      email: recruiter.email,
-      isVerified: recruiter.isVerified,
+      fullName: recruiter.fullName || 'N/A',
+      email: recruiter.email || 'N/A',
+      isVerified: recruiter.isVerified || false,
       createdAt: recruiter.createdAt,
       recruiterOnboardingDetails: {
-        phone: onboarding.phone || personalInfo.phone || 'Not specified',
+        phone: onboarding.phone || personalInfo.phone || profile.phone || profile.workPhone || 'Not specified',
         phoneVerified: onboarding.phoneVerified || personalInfo.phoneVerified || false,
-        jobTitle: onboarding.jobTitle || authorityInfo.jobTitle || 'Not specified',
-        employmentProof: onboarding.employmentProof || authorityInfo.employmentProof || null,
+        jobTitle: onboarding.jobTitle || authorityInfo.jobTitle || profile.jobTitle || 'Not specified',
+        employmentProof: onboarding.employmentProof || authorityInfo.employmentProof || profile.employmentProof || null,
         company: {
-          name: onboarding.company?.name || companyInfo.name || 'Not specified',
-          website: onboarding.company?.website || companyInfo.website || 'Not specified',
-          logo: onboarding.company?.logo || companyInfo.logo || null,
-          size: onboarding.company?.size || companyInfo.size || 'Not specified',
-          address: onboarding.company?.address || companyInfo.address || 'Not specified',
-          images: onboarding.company?.images || companyInfo.images || [],
+          name: onboarding.company?.name || companyInfo.name || profile.company?.name || 'Not specified',
+          website: onboarding.company?.website || companyInfo.website || profile.company?.website || 'Not specified',
+          logo: onboarding.company?.logo || companyInfo.logo || profile.company?.logo || null,
+          size: onboarding.company?.size || companyInfo.size || profile.company?.size || 'Not specified',
+          address: onboarding.company?.address || companyInfo.address || profile.company?.headOfficeLocation?.address || profile.location ? `${profile.location.city || ''}, ${profile.location.state || ''}, ${profile.location.country || ''}`.trim() : 'Not specified',
+          images: onboarding.company?.images || companyInfo.images || profile.company?.images || [],
           socialLinks: {
-            facebook: onboarding.company?.socialLinks?.facebook || companyInfo.socialLinks?.facebook || 'Not specified',
-            linkedin: onboarding.company?.socialLinks?.linkedin || companyInfo.socialLinks?.linkedin || 'Not specified',
-            twitter: onboarding.company?.socialLinks?.twitter || companyInfo.socialLinks?.twitter || 'Not specified',
-            instagram: onboarding.company?.socialLinks?.instagram || companyInfo.socialLinks?.instagram || 'Not specified'
+            facebook: onboarding.company?.socialLinks?.facebook || companyInfo.socialLinks?.facebook || profile.company?.socialLinks?.facebook || '',
+            linkedin: onboarding.company?.socialLinks?.linkedin || companyInfo.socialLinks?.linkedin || profile.company?.socialLinks?.linkedin || '',
+            twitter: onboarding.company?.socialLinks?.twitter || companyInfo.socialLinks?.twitter || profile.company?.socialLinks?.twitter || '',
+            instagram: onboarding.company?.socialLinks?.instagram || companyInfo.socialLinks?.instagram || profile.company?.socialLinks?.instagram || ''
           }
         },
-        isComplete: onboarding.isComplete || !!application,
-        submittedAt: onboarding.submittedAt || application?.submittedAt
+        isComplete: onboarding.isComplete || !!application || !!profile.company,
+        submittedAt: onboarding.submittedAt || application?.submittedAt || recruiter.createdAt
       }
     };
 
+    console.log('Returning formatted profile for:', recruiter.fullName);
     res.status(200).json({
       success: true,
       data: formattedProfile

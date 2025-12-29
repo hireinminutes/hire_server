@@ -6,6 +6,17 @@ const jobSchema = new mongoose.Schema({
     ref: 'Recruiter',
     required: [true, 'Posted by is required']
   },
+  postedByAdmin: {
+    type: Boolean,
+    default: false
+  },
+  companyInfo: {
+    id: { type: mongoose.Schema.Types.ObjectId, ref: 'Recruiter' },
+    name: String,
+    logo: String,
+    recruiterName: String,
+    recruiterEmail: String
+  },
   jobDetails: {
     // 1. Basic Job Info
     basicInfo: {

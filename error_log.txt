@@ -1,0 +1,5 @@
+{
+  "message": "Job validation failed: jobDetails.basicInfo.employmentType: `Contract` is not a valid enum value for path `jobDetails.basicInfo.employmentType`., jobDetails.qualifications.preferredEducation: `` is not a valid enum value for path `jobDetails.qualifications.preferredEducation`.",
+  "errors": {},
+  "_message": "Job validation failed"
+}

@@ -229,6 +229,21 @@ const verifyPayment = async (req, res) => {
       console.log('User job access unlocked successfully');
     }
 
+    // Log the activity
+    const { logActivity } = require('../utils/activityLogger');
+    await logActivity({
+      userId: req.user.id,
+      userModel: req.user.role === 'employer' ? 'Recruiter' : 'Candidate', // Assuming role check
+      action: 'SUBSCRIPTION_PURCHASE',
+      details: {
+        plan: planType,
+        amount: order.amount,
+        currency: order.currency,
+        paymentId: razorpay_payment_id,
+        orderId: razorpay_order_id
+      }
+    }, req);
+
     res.status(200).json({
       success: true,
       message: 'Payment verified successfully',

@@ -1203,4 +1203,304 @@ router.post('/ads/:id/click', async (req, res) => {
   }
 });
 
+// Get companies list for admin job posting
+router.get('/companies', protect, adminOnly, async (req, res) => {
+  try {
+    const recruiters = await Recruiter.find({
+      approvalStatus: 'approved',
+      'profile.company.name': { $exists: true, $ne: '' }
+    })
+      .select('_id fullName profile.company email')
+      .sort({ 'profile.company.name': 1 });
+
+    const companies = recruiters.map(recruiter => ({
+      id: recruiter._id,
+      name: recruiter.profile?.company?.name || 'Unknown Company',
+      logo: recruiter.profile?.company?.logo || null,
+      recruiterName: recruiter.fullName,
+      recruiterEmail: recruiter.email
+    }));
+
+    res.status(200).json({
+      success: true,
+      data: companies
+    });
+  } catch (error) {
+    console.error('Error fetching companies:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch companies',
+      error: error.message
+    });
+  }
+});
+
+// Post job as admin
+router.post('/jobs', protect, adminOnly, async (req, res) => {
+  try {
+    const { companyId, customCompany, jobDetails } = req.body;
+
+    if (!jobDetails) {
+      return res.status(400).json({
+        success: false,
+        message: 'Job details are required'
+      });
+    }
+
+    // Check if using existing company or custom company
+    if (!companyId && !customCompany) {
+      return res.status(400).json({
+        success: false,
+        message: 'Either company ID or custom company details are required'
+      });
+    }
+
+    const Job = require('../models/Job');
+    let companyInfo;
+
+    if (customCompany && customCompany.name) {
+      // Use custom company details
+      companyInfo = {
+        id: null,
+        name: customCompany.name,
+        logo: customCompany.logo || null,
+        recruiterName: 'Admin',
+        recruiterEmail: req.user.email
+      };
+    } else {
+      // Verify existing company exists
+      const recruiter = await Recruiter.findById(companyId);
+      if (!recruiter) {
+        return res.status(404).json({
+          success: false,
+          message: 'Company not found'
+        });
+      }
+
+      companyInfo = {
+        id: recruiter._id,
+        name: recruiter.profile?.company?.name || 'Unknown Company',
+        logo: recruiter.profile?.company?.logo || null,
+        recruiterName: recruiter.fullName,
+        recruiterEmail: recruiter.email
+      };
+    }
+
+    // Extract fields that need to be at the root level of Job schema
+    const { benefits, applicationDeadline, ...restJobDetails } = jobDetails;
+
+    // Process benefits (convert string to array if needed)
+    let processedBenefits = [];
+    if (typeof benefits === 'string') {
+      processedBenefits = benefits
+        .split(/[,\n]/) // Split by comma or newline
+        .map(b => b.trim())
+        .filter(b => b.length > 0);
+    } else if (Array.isArray(benefits)) {
+      processedBenefits = benefits;
+    }
+
+    // Process applicationDeadline (handle empty string)
+    const finalApplicationDeadline = applicationDeadline ? applicationDeadline : undefined;
+
+    // --- Data Normalization ---
+    // Fix Enum Case Mismatches
+    if (restJobDetails.basicInfo) {
+      // 1. Employment Type: lowercase
+      if (restJobDetails.basicInfo.employmentType) {
+        restJobDetails.basicInfo.employmentType = restJobDetails.basicInfo.employmentType.toLowerCase();
+      }
+
+      // 2. Work Mode: lowercase
+      if (restJobDetails.basicInfo.workMode) {
+        restJobDetails.basicInfo.workMode = restJobDetails.basicInfo.workMode.toLowerCase();
+      }
+
+      // 3. Job Level: Map Frontend Labels to Backend Enums
+      // Frontend: Entry-level, Mid-level, Senior-level, Lead, Executive
+      // Backend: fresher, junior, mid-level, senior, lead, director
+      const jobLevelMap = {
+        'entry-level': 'fresher',
+        'mid-level': 'mid-level',
+        'senior-level': 'senior',
+        'lead': 'lead',
+        'executive': 'director'
+      };
+      if (restJobDetails.basicInfo.jobLevel) {
+        const key = restJobDetails.basicInfo.jobLevel.toLowerCase();
+        // Default to 'fresher' if map fails, or keep if it already matches valid enums
+        restJobDetails.basicInfo.jobLevel = jobLevelMap[key] || restJobDetails.basicInfo.jobLevel.toLowerCase();
+      }
+    }
+
+    if (restJobDetails.compensation) {
+      // Salary Type: lowercase
+      if (restJobDetails.compensation.salaryType) {
+        restJobDetails.compensation.salaryType = restJobDetails.compensation.salaryType.toLowerCase();
+      }
+    }
+
+    if (restJobDetails.qualifications) {
+      // Preferred Education: handle empty string
+      if (restJobDetails.qualifications.preferredEducation === '') {
+        restJobDetails.qualifications.preferredEducation = undefined;
+      }
+      // Minimum Education: lowercase (if needed, though usually standard)
+      if (restJobDetails.qualifications.minimumEducation) {
+        restJobDetails.qualifications.minimumEducation = restJobDetails.qualifications.minimumEducation.toLowerCase();
+      }
+    }
+
+    if (restJobDetails.location && restJobDetails.location.workplaceType) {
+      // Map 'On-site' -> 'onsite'
+      if (restJobDetails.location.workplaceType === 'On-site') {
+        restJobDetails.basicInfo = { ...restJobDetails.basicInfo, workMode: 'onsite' }; // Sync workMode
+        // Remove workplaceType from location if not in schema, 
+        // but 'location.officeAddress' is there. 'workplaceType' is likely 'basicInfo.workMode' in schema.
+        // Looking at schema: basicInfo.workMode exists. location.workplaceType DOES NOT exist in schema.
+        // So we should map location.workplaceType to basicInfo.workMode if not already set.
+      } else if (restJobDetails.location.workplaceType) {
+        restJobDetails.basicInfo.workMode = restJobDetails.location.workplaceType.toLowerCase();
+      }
+      // Remove the extra field to avoid strict mode warning if enabled (though not causing 500)
+      delete restJobDetails.location.workplaceType;
+    }
+    // ---------------------------
+
+    // Create job with admin as poster
+    const job = await Job.create({
+      jobDetails: restJobDetails, // Nest the rest under jobDetails
+      benefits: processedBenefits, // Root level
+      applicationDeadline: finalApplicationDeadline, // Root level
+      postedBy: req.user._id,
+      postedByAdmin: true,
+      companyInfo,
+      status: 'active',
+      createdAt: new Date()
+    });
+
+    res.status(201).json({
+      success: true,
+      message: 'Job posted successfully',
+      data: job
+    });
+  } catch (error) {
+    console.error('Error posting job as admin:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to post job',
+      error: error.message
+    });
+  }
+});
+
+// Delete job as admin
+router.delete('/jobs/:id', protect, adminOnly, async (req, res) => {
+  try {
+    const Job = require('../models/Job');
+    const job = await Job.findByIdAndDelete(req.params.id);
+
+    if (!job) {
+      return res.status(404).json({
+        success: false,
+        message: 'Job not found'
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: 'Job deleted successfully',
+      data: { id: req.params.id }
+    });
+  } catch (error) {
+    console.error('Error deleting job as admin:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to delete job',
+      error: error.message
+    });
+  }
+});
+
+// Get activity logs
+router.get('/logs', protect, adminOnly, async (req, res) => {
+  try {
+    const { action, startDate, endDate, search, limit = 50, page = 1 } = req.query;
+    const ActivityLog = require('../models/ActivityLog');
+    const Candidate = require('../models/Candidate');
+    const Recruiter = require('../models/Recruiter');
+
+    let query = {};
+
+    // Filter by Action
+    if (action) {
+      query.action = action;
+    }
+
+    // Filter by Date Range
+    if (startDate || endDate) {
+      query.createdAt = {};
+      if (startDate) query.createdAt.$gte = new Date(startDate);
+      if (endDate) query.createdAt.$lte = new Date(endDate);
+    }
+
+    // Filter by Search (User Name)
+    if (search) {
+      const searchRegex = new RegExp(search, 'i');
+
+      // Find users matching the name
+      const [candidates, recruiters] = await Promise.all([
+        Candidate.find({ fullName: searchRegex }).select('_id'),
+        Recruiter.find({ fullName: searchRegex }).select('_id')
+      ]);
+
+      const userIds = [
+        ...candidates.map(c => c._id),
+        ...recruiters.map(r => r._id)
+      ];
+
+      if (userIds.length > 0) {
+        query.user = { $in: userIds };
+      } else {
+        // If search provided but no users found, return empty result strictly
+        return res.status(200).json({
+          success: true,
+          count: 0,
+          data: [],
+          total: 0,
+          pages: 0
+        });
+      }
+    }
+
+    const skip = (parseInt(page) - 1) * parseInt(limit);
+
+    // Execute Query
+    const logs = await ActivityLog.find(query)
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(parseInt(limit))
+      .populate('user', 'fullName email profilePicture profile.company.name'); // Populate common fields
+
+    const total = await ActivityLog.countDocuments(query);
+
+    res.status(200).json({
+      success: true,
+      count: logs.length,
+      data: logs,
+      total,
+      pages: Math.ceil(total / parseInt(limit)),
+      currentPage: parseInt(page)
+    });
+
+  } catch (error) {
+    console.error('Error fetching activity logs:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch activity logs',
+      error: error.message
+    });
+  }
+});
+
 module.exports = router;

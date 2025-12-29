@@ -184,6 +184,24 @@ const createApplication = async (req, res, next) => {
     job.applicationCount += 1;
     await job.save();
 
+    // Log the activity
+    const { logActivity } = require('../utils/activityLogger');
+    try {
+      await logActivity({
+        userId: req.user.id,
+        userModel: 'Candidate',
+        action: 'INTERVIEW_REQUEST', // Application is treated as an interview request/job application
+        details: {
+          jobId: job._id,
+          jobTitle: job.jobDetails?.basicInfo?.jobTitle || 'Unknown Job',
+          companyName: job.jobDetails?.companyInfo?.companyName || 'Unknown Company',
+          applicationId: application._id
+        }
+      }, req);
+    } catch (logErr) {
+      console.error('Failed to log application activity:', logErr);
+    }
+
     res.status(201).json({
       success: true,
       data: application

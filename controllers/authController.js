@@ -930,6 +930,7 @@ const updateProfile = async (req, res, next) => {
       if (req.body.gender !== undefined) user.profile.gender = req.body.gender;
 
       // Professional Summary
+      if (req.body.headline !== undefined) user.profile.headline = req.body.headline;
       if (req.body.professionalSummary !== undefined) user.profile.professionalSummary = req.body.professionalSummary;
 
       // Skills
@@ -1068,6 +1069,10 @@ const changePassword = async (req, res) => {
     }
 
     user.password = newPassword;
+    // Track when password was changed (for all user types if schema supports it)
+    if (user.schema && user.schema.path('passwordChangedAt') || user._doc && user._doc.passwordChangedAt !== undefined || req.user.role === 'job_seeker') {
+      user.passwordChangedAt = new Date();
+    }
     await user.save();
 
     res.json({

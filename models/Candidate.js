@@ -36,6 +36,9 @@ const candidateSchema = new mongoose.Schema({
   planExpiresAt: {
     type: Date
   },
+  passwordChangedAt: {
+    type: Date
+  },
   interviewLinks: [{
     link: String,
     sharedAt: {
@@ -79,6 +82,10 @@ const candidateSchema = new mongoose.Schema({
     },
 
     // Professional Summary
+    headline: {
+      type: String,
+      maxlength: [100, 'Headline cannot exceed 100 characters']
+    },
     professionalSummary: {
       type: String,
       maxlength: [500, 'Professional summary cannot exceed 500 characters']

@@ -243,10 +243,58 @@ const sendBulkEmailToCandidates = async (req, res, next) => {
   }
 };
 
+// @desc    Get all jobs for admin
+// @route   GET /api/admin/jobs
+// @access  Private/Admin
+const getAllJobs = async (req, res, next) => {
+  try {
+    const limit = parseInt(req.query.limit, 10);
+    const search = req.query.search;
+
+    let query = Job.find();
+
+    // Search functionality
+    if (search) {
+      const searchRegex = { $regex: search, $options: 'i' };
+      query = Job.find({
+        $or: [
+          { 'jobDetails.basicInfo.jobTitle': searchRegex },
+          { 'jobDetails.companyInfo.companyName': searchRegex },
+          { 'companyInfo.name': searchRegex }
+        ]
+      });
+    }
+
+    // Sort by newest first
+    query = query.sort({ createdAt: -1 });
+
+    if (limit && limit > 0) {
+      query = query.limit(limit);
+    }
+
+    const jobs = await query
+      .populate('postedBy', 'fullName email profile.company.name profile.company.logo')
+      .lean();
+
+    // Ensure applicationCount and views are present (should be in schema default, but good to double check)
+    // Also ensuring we return specific fields expected by frontend if needed, 
+    // but the schema already has applicationCount and views at root level.
+
+    res.status(200).json({
+      success: true,
+      count: jobs.length,
+      data: jobs
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   getPendingRecruiters,
   approveRecruiter,
   rejectRecruiter,
   getDashboardStats,
-  sendBulkEmailToCandidates
+  sendBulkEmailToCandidates,
+  getAllJobs
 };

@@ -8,7 +8,8 @@ const {
   getCollegeStudents,
   createStudent,
   updateStudent,
-  deleteStudent
+  deleteStudent,
+  getColleges
 } = require('../controllers/collegeController');
 const { protect, collegeOnly } = require('../middlewares/authMiddleware');
 
@@ -17,6 +18,7 @@ const router = express.Router();
 // College authentication routes
 router.post('/register', registerCollege);
 router.post('/login', loginCollege);
+router.get('/list', getColleges);
 
 // Protected college routes
 router.get('/profile', protect, collegeOnly, getCollegeProfile);

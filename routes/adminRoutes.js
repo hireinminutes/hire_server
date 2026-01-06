@@ -180,9 +180,20 @@ router.get('/verified-candidates', protect, async (req, res) => {
     }
 
     // Build query
-    const query = { isProfileVerified: true };
+    let query = {};
+
+    // Check if filtering by specific plan
     if (req.query.plan && req.query.plan !== 'all') {
       query.plan = req.query.plan;
+    } else {
+      // Default: Show verified candidates OR any Paid users (Premium/Pro)
+      // This ensures recruiters see all potential high-quality candidates
+      query = {
+        $or: [
+          { isProfileVerified: true },
+          { plan: { $in: ['premium', 'pro'] } }
+        ]
+      };
     }
 
     const verifiedCandidates = await Candidate.find(query)
@@ -281,11 +292,13 @@ const {
   approveRecruiter,
   rejectRecruiter,
   getDashboardStats,
-  sendBulkEmailToCandidates
+  sendBulkEmailToCandidates,
+  getAllJobs
 } = require('../controllers/adminController');
 
 // New Admin Controller Routes
 router.get('/stats', protect, adminOnly, getDashboardStats);
+router.get('/jobs', protect, adminOnly, getAllJobs);
 router.post('/candidates/email', protect, adminOnly, sendBulkEmailToCandidates);
 router.get('/recruiters/pending', protect, adminOnly, getPendingRecruiters);
 router.put('/recruiters/:id/approve', protect, adminOnly, approveRecruiter);

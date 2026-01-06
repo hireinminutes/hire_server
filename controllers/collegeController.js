@@ -11,8 +11,11 @@ const generateToken = (id, role) => {
 };
 
 // @desc    Register a new college
-// @route   POST /api/auth/college/register
+// @route   POST /api/college/register
 // @access  Public
+const crypto = require('crypto');
+const { sendEmail, emailTemplates } = require('../utils/sendEmail');
+
 const registerCollege = async (req, res) => {
   try {
     const { name, email, password, contactNumber, address, website, description, accreditation, establishedYear } = req.body;
@@ -20,13 +23,59 @@ const registerCollege = async (req, res) => {
     // Check if college already exists
     const collegeExists = await College.findOne({ email });
     if (collegeExists) {
-      return res.status(400).json({
-        success: false,
-        message: 'College with this email already exists'
+      if (collegeExists.isVerified) {
+        return res.status(400).json({
+          success: false,
+          message: 'College with this email already exists'
+        });
+      }
+
+      // If college exists but not verified, resend OTP
+      // Generate OTP
+      const otp = crypto.randomInt(100000, 999999).toString();
+      const salt = await bcrypt.genSalt(10);
+      const otpHash = await bcrypt.hash(otp, salt);
+      const otpExpiresAt = new Date(Date.now() + 10 * 60 * 1000);
+
+      collegeExists.name = name;
+      collegeExists.password = password; // Will be hashed by pre-save
+      collegeExists.otpHash = otpHash;
+      collegeExists.otpExpiresAt = otpExpiresAt;
+      collegeExists.otpAttempts = 0;
+
+      await collegeExists.save();
+
+      // Send OTP Email
+      const emailTemplate = emailTemplates.otpVerification(otp, name);
+      try {
+        await sendEmail({
+          email: collegeExists.email,
+          subject: emailTemplate.subject,
+          message: emailTemplate.text,
+          html: emailTemplate.html
+        });
+      } catch (emailError) {
+        console.error('Email sending failed:', emailError);
+        // Continue even if email fails, though ideally we should handle this
+      }
+
+      return res.status(200).json({
+        success: true,
+        message: 'Registration successful. OTP sent to email.',
+        data: {
+          _id: collegeExists._id,
+          email: collegeExists.email
+        }
       });
     }
 
-    // Create college (password will be hashed by the model pre-save middleware)
+    // Generate OTP
+    const otp = crypto.randomInt(100000, 999999).toString();
+    const salt = await bcrypt.genSalt(10);
+    const otpHash = await bcrypt.hash(otp, salt);
+    const otpExpiresAt = new Date(Date.now() + 10 * 60 * 1000);
+
+    // Create college
     const college = await College.create({
       name,
       email,
@@ -36,18 +85,32 @@ const registerCollege = async (req, res) => {
       website,
       description,
       accreditation,
-      establishedYear
+      establishedYear,
+      otpHash,
+      otpExpiresAt,
+      isVerified: false
     });
 
     if (college) {
+      // Send OTP Email
+      const emailTemplate = emailTemplates.otpVerification(otp, name);
+      try {
+        await sendEmail({
+          email: college.email,
+          subject: emailTemplate.subject,
+          message: emailTemplate.text,
+          html: emailTemplate.html
+        });
+      } catch (emailError) {
+        console.error('Email sending failed:', emailError);
+      }
+
       res.status(201).json({
         success: true,
-        message: 'College registered successfully',
+        message: 'Registration successful. OTP sent to email.',
         data: {
           _id: college._id,
-          name: college.name,
-          email: college.email,
-          token: generateToken(college._id)
+          email: college.email
         }
       });
     } else {
@@ -87,6 +150,14 @@ const loginCollege = async (req, res) => {
       return res.status(401).json({
         success: false,
         message: 'Invalid email or password'
+      });
+    }
+
+    // Check verification status
+    if (!college.isVerified) {
+      return res.status(403).json({
+        success: false,
+        message: 'Please verify your email address to login. Check your email for the OTP.'
       });
     }
 
@@ -214,12 +285,12 @@ const updateCollegeProfile = async (req, res) => {
 const getCollegeStudents = async (req, res) => {
   try {
     // Get students who belong to this college
-    const students = await Candidate.find({ 
+    const students = await Candidate.find({
       college: req.college._id,
-      role: 'college_student'
+      role: { $in: ['college_student', 'job_seeker'] }
     })
-    .select('fullName email profile.skills profile.location profile.phone isVerified createdAt')
-    .sort({ createdAt: -1 });
+      .select('fullName email profile skillPassport role plan isVerified createdAt profilePicture')
+      .sort({ createdAt: -1 });
 
     res.json({
       success: true,
@@ -372,6 +443,28 @@ const deleteStudent = async (req, res) => {
   }
 };
 
+// @desc    Get all registered colleges (public list for dropdown)
+// @route   GET /api/college/list
+// @access  Public
+const getColleges = async (req, res) => {
+  try {
+    const colleges = await College.find({ isVerified: true }) // Only verified colleges
+      .select('_id name address.city address.state address.country logo')
+      .sort({ name: 1 });
+
+    res.json({
+      success: true,
+      data: colleges
+    });
+  } catch (error) {
+    console.error('Get colleges list error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error'
+    });
+  }
+};
+
 module.exports = {
   registerCollege,
   loginCollege,
@@ -381,5 +474,6 @@ module.exports = {
   getCollegeStudents,
   createStudent,
   updateStudent,
-  deleteStudent
+  deleteStudent,
+  getColleges
 };

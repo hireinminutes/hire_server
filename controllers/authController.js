@@ -953,6 +953,13 @@ const updateProfile = async (req, res, next) => {
                 });
                 if (college) {
                   user.college = college._id;
+
+                  // Add student to college's students list if not already present
+                  await College.findByIdAndUpdate(
+                    college._id,
+                    { $addToSet: { students: user._id } }
+                  );
+
                   console.log('College matched and set:', college.name, 'for user:', user._id);
                   break; // Set the first match found
                 }

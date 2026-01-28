@@ -147,7 +147,8 @@ const recruiterSchema = new mongoose.Schema({
         linkedin: String,
         twitter: String,
         instagram: String,
-        youtube: String
+        youtube: String,
+        facebook: String
       },
       gstNumber: String, // GST or business registration number
       companyType: {

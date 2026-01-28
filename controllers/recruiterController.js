@@ -76,24 +76,24 @@ const updateCompanyDetails = async (req, res) => {
         if (!recruiter.profile.company) recruiter.profile.company = {};
 
         // Update fields
-        if (name) recruiter.profile.company.name = name;
-        if (description) recruiter.profile.company.description = description;
-        if (website) recruiter.profile.company.website = website;
-        if (size) recruiter.profile.company.size = size;
-        if (logo) recruiter.profile.company.logo = logo; // Assuming base64 or URL string
-        if (companyType) recruiter.profile.company.companyType = companyType;
-        if (industry) recruiter.profile.company.industry = industry;
-        if (foundingYear) recruiter.profile.company.foundingYear = foundingYear;
+        if (name !== undefined) recruiter.profile.company.name = name;
+        if (description !== undefined) recruiter.profile.company.description = description;
+        if (website !== undefined) recruiter.profile.company.website = website === "" ? null : website;
+        if (size !== undefined) recruiter.profile.company.size = size === "" ? null : size;
+        if (logo !== undefined) recruiter.profile.company.logo = logo; // Assuming base64 or URL string
+        if (companyType !== undefined) recruiter.profile.company.companyType = companyType === "" ? null : companyType;
+        if (industry !== undefined) recruiter.profile.company.industry = industry === "" ? null : industry;
+        if (foundingYear !== undefined) recruiter.profile.company.foundingYear = foundingYear === "" ? null : foundingYear;
 
         // Update location
         if (headOfficeLocation) {
             if (!recruiter.profile.company.headOfficeLocation) recruiter.profile.company.headOfficeLocation = {};
             const { address, city, state, country, zipCode } = headOfficeLocation;
-            if (address) recruiter.profile.company.headOfficeLocation.address = address;
-            if (city) recruiter.profile.company.headOfficeLocation.city = city;
-            if (state) recruiter.profile.company.headOfficeLocation.state = state;
-            if (country) recruiter.profile.company.headOfficeLocation.country = country;
-            if (zipCode) recruiter.profile.company.headOfficeLocation.zipCode = zipCode;
+            if (address !== undefined) recruiter.profile.company.headOfficeLocation.address = address;
+            if (city !== undefined) recruiter.profile.company.headOfficeLocation.city = city;
+            if (state !== undefined) recruiter.profile.company.headOfficeLocation.state = state;
+            if (country !== undefined) recruiter.profile.company.headOfficeLocation.country = country;
+            if (zipCode !== undefined) recruiter.profile.company.headOfficeLocation.zipCode = zipCode;
         }
 
         // Update social links

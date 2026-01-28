@@ -43,12 +43,20 @@ router.post('/subscribe', protect, async (req, res) => {
   }
 });
 
-// Public route to get candidate profile by slug
-router.get('/profile/:slug', async (req, res) => {
+// Public route to get candidate profile by slug or ID
+router.get('/profile/:identifier', async (req, res) => {
   try {
-    const { slug } = req.params;
+    const { identifier } = req.params;
 
-    const candidate = await Candidate.findOne({ slug }).select('-password -resetPasswordToken -resetPasswordExpire -verificationToken');
+    let query;
+    // Check if identifier looks like a valid MongoDB ObjectId
+    if (identifier.match(/^[0-9a-fA-F]{24}$/)) {
+      query = { $or: [{ slug: identifier }, { _id: identifier }] };
+    } else {
+      query = { slug: identifier };
+    }
+
+    const candidate = await Candidate.findOne(query).select('-password -resetPasswordToken -resetPasswordExpire -verificationToken');
 
     if (!candidate) {
       return res.status(404).json({
@@ -78,6 +86,7 @@ router.get('/profile/:slug', async (req, res) => {
         socialProfiles: candidate.profile?.socialProfiles,
         codingProfiles: candidate.profile?.codingProfiles
       },
+      email: candidate.email, // Include email if it's public/allowed, usually needed for contact
       isVerified: candidate.isVerified || false,
       profileCompletion: candidate.profileCompletion || { overall: 0 },
       createdAt: candidate.createdAt

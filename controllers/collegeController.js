@@ -161,12 +161,7 @@ const loginCollege = async (req, res) => {
       });
     }
 
-    if (college.verificationStatus !== 'approved') {
-      return res.status(403).json({
-        success: false,
-        message: 'Your account is under review by the administrator. You will receive an email once approved.'
-      });
-    }
+
 
     res.json({
       success: true,

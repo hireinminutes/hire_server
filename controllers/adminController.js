@@ -2,7 +2,39 @@ const Recruiter = require('../models/Recruiter');
 const Candidate = require('../models/Candidate');
 const Job = require('../models/Job');
 const Course = require('../models/Course');
+const College = require('../models/College');
 const { sendEmail, emailTemplates } = require('../utils/sendEmail');
+
+// @desc    Get all colleges
+// @route   GET /api/admin/colleges
+// @access  Private/Admin
+const getColleges = async (req, res, next) => {
+  try {
+    const colleges = await College.find()
+      .select('name email address isVerified verificationStatus students createdAt')
+      .sort({ createdAt: -1 });
+
+    const formattedColleges = colleges.map(college => ({
+      id: college._id,
+      name: college.name,
+      email: college.email,
+      location: college.address ?
+        `${college.address.city || ''}, ${college.address.state || ''}`.replace(/^,\s*|,\s*$/g, '').trim() || 'Not specified'
+        : 'Not specified',
+      studentsCount: college.students ? college.students.length : 0,
+      status: college.isVerified ? 'verified' : (college.verificationStatus || 'unverified'),
+      joinDate: college.createdAt ? new Date(college.createdAt).toISOString().split('T')[0] : 'N/A'
+    }));
+
+    res.status(200).json({
+      success: true,
+      count: colleges.length,
+      data: formattedColleges
+    });
+  } catch (error) {
+    next(error);
+  }
+};
 
 // @desc    Get all pending recruiters
 // @route   GET /api/admin/recruiters/pending
@@ -283,7 +315,144 @@ const getAllJobs = async (req, res, next) => {
     res.status(200).json({
       success: true,
       count: jobs.length,
-      data: jobs
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Approve a college
+// @route   PUT /api/admin/colleges/:id/approve
+// @access  Private/Admin
+const approveCollege = async (req, res, next) => {
+  try {
+    const college = await College.findById(req.params.id);
+
+    if (!college) {
+      return res.status(404).json({
+        success: false,
+        message: 'College not found'
+      });
+    }
+
+    if (college.verificationStatus === 'approved') {
+      return res.status(400).json({
+        success: false,
+        message: 'College is already approved'
+      });
+    }
+
+    college.verificationStatus = 'approved';
+    await college.save();
+
+    // Send Approval Email
+    try {
+      const emailContent = {
+        subject: 'College Account Approved - Hire In Minutes',
+        text: `Hello ${college.name},\n\nYour college account has been approved by our admin team. You can now log in and manage your students.\n\nLogin here: ${process.env.CLIENT_URL}/college/login\n\nBest regards,\nHire In Minutes Team`,
+        html: `<p>Hello ${college.name},</p><p>Your college account has been approved by our admin team. You can now log in and manage your students.</p><p><a href="${process.env.CLIENT_URL}/college/login">Login here</a></p><p>Best regards,<br>Hire In Minutes Team</p>`
+      };
+
+      await sendEmail({
+        email: college.email,
+        subject: emailContent.subject,
+        message: emailContent.text,
+        html: emailContent.html
+      });
+    } catch (emailError) {
+      console.error('College approval email failed:', emailError);
+    }
+
+    res.status(200).json({
+      success: true,
+      message: 'College approved successfully',
+      data: {
+        id: college._id,
+        name: college.name,
+        status: college.verificationStatus
+      }
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Reject a college
+// @route   PUT /api/admin/colleges/:id/reject
+// @access  Private/Admin
+const rejectCollege = async (req, res, next) => {
+  try {
+    const { reason } = req.body;
+    const college = await College.findById(req.params.id);
+
+    if (!college) {
+      return res.status(404).json({
+        success: false,
+        message: 'College not found'
+      });
+    }
+
+    college.verificationStatus = 'rejected';
+    // We optionally save the rejection reason if the schema supports it, 
+    // or just log it. The College model currently doesn't have rejectionReason, 
+    // so we'll just update status.
+    await college.save();
+
+    // Send Rejection Email
+    try {
+      const emailContent = {
+        subject: 'College Account Status - Hire In Minutes',
+        text: `Hello ${college.name},\n\nYour college account application has been reviewed and unfortunately rejected.\n\nReason: ${reason || 'Does not meet our criteria'}\n\nIf you believe this is a mistake, please contact support.\n\nBest regards,\nHire In Minutes Team`,
+        html: `<p>Hello ${college.name},</p><p>Your college account application has been reviewed and unfortunately rejected.</p><p><strong>Reason:</strong> ${reason || 'Does not meet our criteria'}</p><p>If you believe this is a mistake, please contact support.</p><p>Best regards,<br>Hire In Minutes Team</p>`
+      };
+
+      await sendEmail({
+        email: college.email,
+        subject: emailContent.subject,
+        message: emailContent.text,
+        html: emailContent.html
+      });
+    } catch (emailError) {
+      console.error('College rejection email failed:', emailError);
+    }
+
+    res.status(200).json({
+      success: true,
+      message: 'College rejected successfully',
+      data: {
+        id: college._id,
+        name: college.name,
+        status: college.verificationStatus
+      }
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Get students for a specific college
+// @route   GET /api/admin/colleges/:id/students
+// @access  Private/Admin
+const getCollegeStudents = async (req, res, next) => {
+  try {
+    const college = await College.findById(req.params.id)
+      .populate({
+        path: 'students',
+        select: 'fullName email profile isVerified plan profilePicture createdAt'
+      });
+
+    if (!college) {
+      return res.status(404).json({
+        success: false,
+        message: 'College not found'
+      });
+    }
+
+    // Return the students array
+    res.status(200).json({
+      success: true,
+      count: college.students ? college.students.length : 0,
+      data: college.students || []
     });
   } catch (error) {
     next(error);
@@ -296,5 +465,9 @@ module.exports = {
   rejectRecruiter,
   getDashboardStats,
   sendBulkEmailToCandidates,
-  getAllJobs
+  getAllJobs,
+  getColleges,
+  approveCollege,
+  rejectCollege,
+  getCollegeStudents
 };

@@ -293,12 +293,20 @@ const {
   rejectRecruiter,
   getDashboardStats,
   sendBulkEmailToCandidates,
-  getAllJobs
+  getAllJobs,
+  getColleges,
+  approveCollege,
+  rejectCollege,
+  getCollegeStudents
 } = require('../controllers/adminController');
 
 // New Admin Controller Routes
 router.get('/stats', protect, adminOnly, getDashboardStats);
 router.get('/jobs', protect, adminOnly, getAllJobs);
+router.get('/colleges', protect, adminOnly, getColleges);
+router.put('/colleges/:id/approve', protect, adminOnly, approveCollege);
+router.put('/colleges/:id/reject', protect, adminOnly, rejectCollege);
+router.get('/colleges/:id/students', protect, adminOnly, getCollegeStudents);
 router.post('/candidates/email', protect, adminOnly, sendBulkEmailToCandidates);
 router.get('/recruiters/pending', protect, adminOnly, getPendingRecruiters);
 router.put('/recruiters/:id/approve', protect, adminOnly, approveRecruiter);

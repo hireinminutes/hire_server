@@ -22,6 +22,7 @@ const recruiterRoutes = require('./routes/recruiterRoutes');
 
 // Import middleware
 const errorHandler = require('./middlewares/errorHandler');
+const connectDB = require('./config/database');
 
 const app = express();
 
@@ -40,6 +41,12 @@ const corsOptions = {
 };
 
 app.use(cors(corsOptions));
+
+// Connect to database before processing requests
+app.use(async (req, res, next) => {
+  await connectDB();
+  next();
+});
 
 // Security middleware
 app.use(helmet({
